@@ -1,0 +1,39 @@
+# MoD debarment extraction agent — configuration
+
+site:
+  base_url: https://www.mod.gov.in
+  sources:                       # listing pages to crawl (paginated with ?page=N)
+    - /dod/en/oms_orders_Archive
+    - /dod/en/oms_orders
+  keyword: debar                 # matches debar / debarment / debarred (plain substring, no regex)
+  max_pages: 50                  # safety cap per source
+  timeout: 30                    # seconds per request
+  retries: 3
+  delay_seconds: 1               # pause between page requests
+
+# Step 1 of extraction: GLM-OCR turns the scanned PDF into Markdown text/tables.
+ocr:
+  backend: zai                   # zai = hosted Z.ai API  |  ollama = self-hosted (VM)
+  model: glm-ocr
+  zai_url: https://api.z.ai/api/paas/v4/layout_parsing
+  ollama_url: http://localhost:11434   # change to http://<vm-ip>:11434 when deployed
+  dpi: 300                       # page render resolution (ollama backend only)
+  timeout: 300
+
+# Step 2 of extraction: a GLM chat model turns the OCR Markdown into our JSON schema.
+# Any OpenAI-compatible endpoint works:
+#   Z.ai:   https://api.z.ai/api/paas/v4
+#   Ollama: http://<vm-ip>:11434/v1
+structurer:
+  base_url: https://api.z.ai/api/paas/v4
+  model: glm-4.7-flash
+  timeout: 300
+  retries: 2
+
+paths:
+  state: state/processed.json
+  pdfs: data/pdfs
+  ocr: data/ocr
+  json: data/json
+  excel: output/debarment_list.xlsx
+  logs: logs
